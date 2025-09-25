@@ -1,227 +1,216 @@
-# Multiagent System Design Report
-## Traffic Bottleneck Coordination using AutoGen Framework
+# Multiagent Traffic Bottleneck Coordination (Autogen-AgentChat)
 
-**Assignment**: MAS-Assignment-1  
-**Framework**: Microsoft AutoGen  
-
----
-
-## Executive Summary
-
-This report presents the design and implementation approach for a multiagent system (MAS) that coordinates shared resource access—specifically, managing traffic flow through a narrow road leading to a lecture hall complex. The system uses Microsoft's AutoGen framework to implement cooperative agents that negotiate commitments to prevent congestion during simultaneous lecture endings.
-
-The proposed solution addresses the core challenge of coordinating multiple autonomous classroom agents with a bottleneck monitoring agent to ensure smooth student egress while maintaining fairness and preventing violations through a commitment-based protocol.
+**MAS — Multiagent Systems Course**
+Traffic coordination demo using the `autogen-agentchat` framework and a Gemini model client.
 
 ---
 
-## 1. System Architecture
+## Overview
 
-### 1.1 Agent Design
+This repository contains a simple multiagent simulation demonstrating how classroom agents can coordinate student exit times at a physical bottleneck (e.g., a corridor or stairwell). The system uses conversational agents to:
 
-**Bottleneck Agent (Agent B)**
-- **Role**: Central traffic monitor and information broadcaster
-- **Responsibilities**:
-  - Monitor bottleneck point capacity (50 students/minute)
-  - Estimate total students across all classrooms
-  - Broadcast capacity and congestion information
-  - Track system-wide performance metrics
+* Monitor bottleneck capacity (BottleneckAgent)
+* Assess classroom situations (ClassroomAgent)
+* Negotiate commitments to shift exit times (PROPOSE / ACCEPT / REJECT)
+* Execute and track commitments
 
-**Classroom Agents (C1, C2, C3, C4, C5)**
-- **Role**: Individual classroom coordinators
-- **Responsibilities**:
-  - Monitor classroom attendance
-  - Negotiate commitments with peer agents
-  - Coordinate staggered student exits
-  - Maintain commitment history and honor obligations
-  - Consult with professors on lecture duration flexibility
+The code is written to be minimally invasive and demonstrates:
 
-### 1.2 Communication Architecture
-
-The system implements AutoGen's GroupChat framework with the following message types:
-
-- **TRAFFIC_UPDATE**: Broadcast from Agent B with current capacity
-- **COMMITMENT_PROPOSAL**: Negotiation messages between classroom agents
-- **COMMITMENT_ACCEPTANCE/REJECTION**: Response to proposals
-- **DEAL_BROADCAST**: Announcement of successful agreements
-- **VIOLATION_ALERT**: Warning for commitment violations
+* async/await workflow for agent calls
+* tool-enabled agents (small helper functions)
+* a single, shared `model_client` used across agents (closed once after everything finishes)
 
 ---
 
-## 2. Commitment Protocol Design
+## Features
 
-### 2.1 Commitment Structure
+* Simulated bottleneck monitoring with structured traffic updates
+* Classroom assessments that consider student counts and professor flexibility
+* A negotiation protocol (PROPOSE / ACCEPT / REJECT) and commitment objects
+* Demonstration of agent tool usage (monitoring and student-count estimation)
+* Minimal, easy-to-read code intended for coursework / demo purposes
 
-```json
-{
-  "debtor": "agent_id",
-  "creditor": "agent_id", 
-  "time_adjustment": "integer_minutes",
-  "future_obligation": "description",
-  "episode": "time_slot_identifier",
-  "created_at": "timestamp"
-}
+---
+
+## Files
+
+* `autogen_agent.py` — main script containing the full multiagent implementation (agents, run loop, tool demos).
+* `.env` — (not included) file to store `GEMINI_API_KEY`.
+* `README.md` — this file.
+
+---
+
+## Prerequisites
+
+* Python 3.10+ (or at least 3.8+, but modern async features recommended)
+* Internet access (to call the remote model API)
+* Access/permission to the Gemini model you intend to use (model availability varies by account/project)
+
+Python packages:
+
+* `autogen_agentchat` (your project dependency)
+* `autogen_ext` (model client extension used in the script)
+* `python-dotenv` (for `.env` support)
+* Any other packages used by your local `autogen_*` implementation
+
+> Install dependencies with a `requirements.txt` or your preferred package manager. Example (adjust package names to your environment):
+
+```text
+autogen_agentchat
+autogen_ext
+python-dotenv
 ```
 
-### 2.2 Negotiation Process
+Install with pip:
 
-1. **Information Gathering**: Agent B broadcasts current bottleneck state
-2. **Situation Assessment**: Classroom agents evaluate their student counts and professor flexibility
-3. **Proposal Generation**: Agents with excess capacity offer time adjustments
-4. **Negotiation**: Bilateral commitment discussions with future obligations
-5. **Broadcasting**: Successful deals announced to all agents
-6. **Execution**: Coordinated student exits in 2-minute intervals
-7. **History Update**: Commitment records updated for future episodes
-
-### 2.3 Violation Management
-
-- **Three-Strike Rule**: Agents violating commitments >3 times trigger violation events
-- **Commitment Tracking**: Persistent history across weekly episodes
-- **Flexibility Assessment**: Professor cooperation levels influence negotiation strategies
-
----
-
-## 3. Race Condition Prevention
-
-### 3.1 Coordination Mechanisms
-
-**Message Ordering**: Sequential processing through AutoGen's conversation management
-**Resource Locks**: Prevent simultaneous bottleneck capacity allocation
-**Atomic Operations**: Commitment creation/acceptance as single transactions
-**Timeout Mechanisms**: Prevent infinite negotiation loops
-
-### 3.2 Fairness Heuristics
-
-- **Round-robin negotiation opportunities**
-- **Historical commitment balance tracking**
-- **Professor flexibility consideration**
-- **Student count proportional adjustments**
-
----
-
-## 4. Implementation Approach
-
-### 4.1 Technology Stack
-
-- **Framework**: Microsoft AutoGen v0.2+
-- **Language**: Python 3.9+
-- **LLM Provider**: OpenAI GPT-4 (configurable)
-- **Dependencies**: pandas, matplotlib, asyncio, pydantic
-
-### 4.2 Project Structure
-
-```
-mas_traffic_coordination/
-├── src/
-│   ├── agents/          # Agent implementations
-│   ├── models/          # Data structures
-│   ├── protocols/       # Communication protocols
-│   ├── utils/           # Utilities and visualization
-│   └── simulation/      # Simulation engine
-├── config/              # Configuration files
-├── tests/               # Unit and integration tests
-├── results/             # Simulation outputs
-└── docs/                # Documentation
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### 4.3 Core Components
+---
 
-**BottleneckAgent Class**
-- Inherits from `autogen.ConversableAgent`
-- Implements traffic monitoring and broadcasting
-- Tracks system performance metrics
+## Configuration (.env)
 
-**ClassroomAgent Class**
-- Inherits from `autogen.ConversableAgent`
-- Implements commitment negotiation logic
-- Maintains local state and history
+Create a `.env` file in the project root with your model API key:
 
-**Commitment Management System**
-- Persistent storage for commitment history
-- Violation detection and alerting
-- Performance analytics and reporting
+```
+GEMINI_API_KEY=your_real_api_key_here
+```
+
+The script expects `load_dotenv()` at startup and obtains the key via `os.getenv('GEMINI_API_KEY')`.
+
+**Important:** Model names and access vary by provider and project. The example script uses:
+
+```python
+model="gemini-2.5-flash"
+```
+
+If you receive a `404`/`model not found` error, either:
+
+* your project does not have access to that model version, or
+* you must use a different model name/version that your account can call.
 
 ---
 
-## 5. Simulation Environment
+## How to run
 
-### 5.1 Environment Parameters
+Assuming your environment is set up and `.env` is present:
 
-- **Classrooms**: 5 (C1-C5)
-- **Bottleneck Capacity**: 50 students/minute
-- **Student Range**: 30-80 per classroom
-- **Time Slot**: Monday 11:00 AM (recurring)
-- **Batch Interval**: 2 minutes
-- **Simulation Episodes**: 10+ weeks
+```bash
+source .venv/bin/activate
+python3 autogen_agent.py
+```
 
-### 5.2 Test Scenarios
+You should see console output for:
 
-1. **Baseline**: No coordination (measure congestion)
-2. **Basic Coordination**: Simple commitment protocol
-3. **Advanced Coordination**: With violation tracking
-4. **Stress Test**: Maximum capacity scenarios
-5. **Robustness Test**: Agent failures and recovery
+1. Traffic monitoring phase (Agent B broadcast)
+2. Situation assessment phase (each classroom)
+3. Negotiation & commitment creation / execution
+4. Tool demonstration block (monitor & estimate tools)
 
-### 5.3 Success Metrics
-
-- **Congestion Reduction**: Bottleneck utilization <80%
-- **Fairness Index**: Balanced commitment distribution
-- **Protocol Efficiency**: Successful negotiation rate
-- **System Reliability**: Violation rate <5%
+When finished, the script closes the shared `model_client` exactly once (in `main()`), so subsequent calls will not fail due to closed resources.
 
 ---
 
-## 6. Expected Results
+## Output example (what to expect)
 
-### 6.1 Performance Improvements
-
-Based on similar multiagent coordination studies, the system is expected to achieve:
-
-- **30-50% reduction** in peak bottleneck congestion
-- **90%+ successful** commitment negotiations
-- **Balanced workload** distribution across classrooms
-- **Sub-5% violation** rate with proper incentive alignment
-
-### 6.2 Emergent Behaviors
-
-- **Coalition formation** between compatible agents
-- **Dynamic load balancing** based on attendance patterns  
-- **Learning and adaptation** over multiple episodes
-- **Robust recovery** from individual agent failures
----
-
-## 8. Risk Mitigation
-
-### 8.1 Technical Risks
-
-**AutoGen Complexity**: Mitigated by starting with simple agent interactions
-**LLM Costs**: Using efficient prompting and local model alternatives
-**Race Conditions**: Implementing proper synchronization mechanisms
-**Scalability**: Designing for modular agent addition/removal
-
-### 8.2 Schedule Risks
-
-**Implementation Complexity**: Buffer time built into timeline
-**Integration Challenges**: Early and frequent testing
-**Performance Issues**: Parallel development of optimization strategies
+* Structured JSON-like traffic update printed by Agent B.
+* Short assessment messages from each classroom agent.
+* A negotiation PROPOSE/REJECT/ACCEPT flow between two classroom agents.
+* A final summary of coordinated student exits (timestamps and counts).
+* Tool demo prints for the enhanced agents, or an error message if the client could not connect.
 
 ---
 
-## 9. Conclusion
+## Troubleshooting
 
-The proposed multiagent system leverages AutoGen's conversation-driven architecture to solve a realistic resource coordination problem. The commitment-based protocol enables cooperative behavior while maintaining agent autonomy, addressing the core requirements of preventing congestion through distributed coordination.
+### 1. `Error code: 404 - Publisher Model ... not found`
 
-The implementation approach balances theoretical rigor with practical considerations, providing a robust foundation for extension to other shared resource coordination scenarios.
+**Cause:** The model name used (e.g., `gemini-1.5-flash-002`, `gemini-2.5-flash`) is not available to your account/project, or the model version has been retired.
+
+**Fixes:**
+
+* Verify the model name is correct and available to your account/project.
+* Check provider docs or console (Vertex AI / your cloud provider) for the correct model names and versions.
+* Use a model your project has access to (set `model=` accordingly).
+
+### 2. `Connection error` in the tool demo
+
+**Cause:** The `model_client` was closed prematurely (or network/credential issues).
+
+**Fixes:**
+
+* Ensure `model_client.close()` is called **once**, after all agent work completes. The posted script calls `await model_client.close()` in `main()` `finally:` — that is the recommended approach.
+* Confirm that your `.env` file contains `GEMINI_API_KEY` and that it is loaded at startup.
+* Verify stable internet and that the API endpoint is reachable.
+
+### 3. Missing or invalid `GEMINI_API_KEY`
+
+**Symptoms:** Authorization errors, inability to connect, or immediate failures.
+
+**Fixes:**
+
+* Double-check `.env` and ensure `GEMINI_API_KEY` is set.
+* Ensure `load_dotenv()` is executed before `OpenAIChatCompletionClient` is constructed (the provided script does this at the top).
+* If your API uses a different env var name, update `os.getenv('GEMINI_API_KEY')` to match.
+
+### 4. Slow or inconsistent responses
+
+* The script uses remote model calls; latency depends on the provider and internet connection.
+* For offline testing, mock the `AssistantAgent` or `model_client` responses.
 
 ---
 
-## References
+## Architecture & Design Notes
 
-1. Microsoft AutoGen Framework Documentation
-2. FIPA Agent Communication Language Specification
-3. Multi-Agent Reinforcement Learning for Traffic Coordination
-4. Commitment Protocols in Multiagent Systems
-5. Race Condition Prevention in Distributed Systems
+* `BottleneckAgent` — monitors and periodically broadcasts a structured traffic state.
+* `ClassroomAgent` — each represents one classroom, can assess its situation and propose or evaluate commitments.
+* `Commitment` dataclass — records negotiated agreements between classrooms.
+* `MultiAgentTrafficSystem` — orchestrates an episode (monitor → assess → negotiate → execute).
+* Tools: small async functions (`monitor_bottleneck`, `estimate_students`) are exposed to agents in the enhanced demo.
+
+Concurrency is handled via `asyncio` and all agent interactions use async `run()` calls from the `autogen_agentchat` API.
 
 ---
 
-**Next Steps**: Proceed with AutoGen environment setup and begin basic agent implementation following the provided code templates and configuration files.
+## Customization Points
+
+* **Number of classrooms:** change `for i in range(1, 6)` to any number.
+* **Initial bottleneck capacity:** set it in `TrafficState(capacity=...)`.
+* **Professor flexibility distribution:** currently `random.choice(["high","medium","low"])`; replace with deterministic values if needed.
+* **Model & client parameters:** switch `model` in `OpenAIChatCompletionClient(...)` to any supported model accessible to your account.
+
+---
+
+## Contribution
+
+This is an educational / demo project. Feel free to:
+
+* Add logging instead of prints.
+* Add unit tests or mocks for the agent client.
+* Add a visualization for exit timings and simulated congestion.
+
+---
+
+## License
+
+Use freely for coursework and learning. If you incorporate this into a larger project or public repo, add an appropriate open-source license.
+
+---
+
+## Contact / Support
+
+If you hit an error you can’t fix:
+
+* Paste the full trace / console output.
+* Confirm the `.env` contents (don’t share your key publicly).
+* Confirm which model name/version you are trying to call and whether your account/project has access.
+
+---
+
+Enjoy experimenting — and if you want, I can:
+
+* produce a `requirements.txt` tuned to your environment, or
+* add unit tests / mocks so you can run the simulation offline.

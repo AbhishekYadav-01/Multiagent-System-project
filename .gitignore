@@ -1,0 +1,188 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+masautogen/
+venv.bak/
+ENV/
+env/
+.env/           # sometimes people name venv ".env" — but we also ignore .env file below
+.venv/
+.ENV/
+env.bak/
+*.env/          # ignore directories named env (not the file .env)
+
+# dotenv file (secrets / API keys)
+.env
+.env.local
+.env.*.local
+
+# Pytest
+.pytest_cache/
+.cache/
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# mypy / pytype
+.mypy_cache/
+.pytype/
+
+# Profiling
+.prof
+.prof*
+profile/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Unit test / coverage reports
+.junit-report/
+test-results/
+
+# IDEs and editors
+# VSCode
+.vscode/
+.history/
+
+# JetBrains
+.idea/
+*.iml
+out/
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Emacs
+*~
+\#*\#
+
+# Vim
+*.swp
+*.swo
+*.swn
+
+# Mac / Windows
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Jupyter Notebook checkpoints and outputs
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# Notebook execution outputs (if you keep notebooks in repo)
+# (optionally ignore .ipynb files entirely)
+# *.ipynb
+
+# SQLite DBs and local DB files
+*.sqlite3
+db.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Compiled Java classes (if any)
+*.class
+
+# Generated files
+dist/
+build/
+*.manifest
+*.spec
+
+# Python wheel / egg
+*.whl
+
+# Coverage, profiling, test artifacts
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+
+# Secret key / credential files
+credentials.json
+secrets.json
+*.pem
+*.key
+
+# Docker
+docker-compose.override.yml
+docker-compose.*.yml
+.env.docker
+
+# Logs, runtime files
+runtime/
+run/
+pids/
+*.pid
+
+# Local editor/project files
+.vagrant/
+*.vagrant
+
+# macOS Finder metadata
+.AppleDouble
+.LSOverride
+
+# Optional: lock files (uncomment if you want to ignore)
+# Pipenv / Poetry
+# Pipfile.lock
+# poetry.lock
+
+# Autogen / model client caches & artifacts
+.autogen_cache/
+autogen_cache/
+.autogen/
+openai_cache/
+.cache_openai/
+model_cache/
+
+# Misc
+coverage/
+htmlcov/
+report/
+
+# Keep an example env file in repo (don't ignore)
+!.env.example
