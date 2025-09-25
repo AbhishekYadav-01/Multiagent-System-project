@@ -2,7 +2,6 @@
 ## Traffic Bottleneck Coordination using AutoGen Framework
 
 **Assignment**: MAS-Assignment-1  
-**Deadline**: September 28, 2025  
 **Framework**: Microsoft AutoGen  
 
 ---
