@@ -1,7 +1,3 @@
-Of course. Here is a concise `README.md` file for your GitHub repository, based on the project's functionality and code. It is written to be direct and avoids any mention of it being a course project.
-
------
-
 # Multi-Agent Traffic Coordination System
 
 This project simulates a multi-agent system designed to manage and coordinate access to a shared, limited resource (a traffic bottleneck). The system uses cooperative agents that negotiate with each other to stagger their access times, effectively preventing congestion.
