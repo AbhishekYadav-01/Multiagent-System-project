@@ -22,8 +22,8 @@ load_dotenv()
 
 # Model client configuration (copy from your other file)
 model_client = OpenAIChatCompletionClient(
-    model="gemini-2.5-flash",
-    api_key=os.getenv('GEMINI_API_KEY')
+    model="gpt-5-nano",
+    api_key=os.getenv('OPENAI_API_KEY')
 )
 
 simulation_task: Optional[asyncio.Task] = None
@@ -359,7 +359,7 @@ class MultiAgentTrafficSystem:
                 for agent in self.classroom_agents:
                     assessment = await agent.assess_situation(traffic_update)
                     yield format_update("assessment_update", {"name": agent.name, "assessment": assessment})
-                    await asyncio.sleep(2);
+                    await asyncio.sleep(3);
 
                 # --- STEP 3: DYNAMIC NEGOTIATION ---
                 yield format_update("log", "3. DYNAMIC NEGOTIATION PHASE")
@@ -638,6 +638,8 @@ async def stop_simulation():
         return {"message": "Stop signal sent."}
     return {"message": "No active simulation to stop."}
 
+# In main.py, REPLACE the existing run_simulation function
+
 @app.post("/simulation/run")
 async def run_simulation(request: Request):
     global simulation_task
@@ -646,18 +648,34 @@ async def run_simulation(request: Request):
 
     form_data = await request.form()
     num_classrooms = int(form_data.get("numClassrooms", 5))
+    # --- NEW: Get the number of episodes from the form data ---
+    num_episodes = int(form_data.get("numEpisodes", 1))
 
     async def run_and_broadcast():
+        # The system is created ONCE, so state persists between episodes
         system = MultiAgentTrafficSystem()
+        
         try:
-            async for update in system.run_coordination_episode(num_classrooms):
-                await manager.broadcast(update)
+            # --- NEW: Loop for the number of requested episodes ---
+            for i in range(num_episodes):
+                episode_header = f"--- STARTING EPISODE {i + 1} of {num_episodes} ---"
+                await manager.broadcast(json.dumps({"type": "log", "data": "\n" + "="*20}))
+                await manager.broadcast(json.dumps({"type": "log", "data": episode_header}))
+                
+                # The simulation generator runs inside the loop
+                async for update in system.run_coordination_episode(num_classrooms):
+                    await manager.broadcast(update)
+                
+                # Add a small delay between episodes for visual clarity
+                if i < num_episodes - 1:
+                    await asyncio.sleep(5)
+
         except asyncio.CancelledError:
             await manager.broadcast(json.dumps({"type": "log", "data": "[Simulation Stopped by User]"}))
         finally:
-            # Ensure final state is saved even on cancellation
+            # State is saved only once at the very end
             system.save_commitments_to_file()
-            await manager.broadcast(json.dumps({"type": "log", "data": "💾 State saved successfully."}))
+            await manager.broadcast(json.dumps({"type": "log", "data": "💾 Final state saved successfully."}))
 
 
     simulation_task = asyncio.create_task(run_and_broadcast())

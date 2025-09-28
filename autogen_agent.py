@@ -23,8 +23,8 @@ from dotenv import load_dotenv
 load_dotenv()
 # Model client configuration for autogen-agentchat
 model_client = OpenAIChatCompletionClient(
-    model="gemini-2.5-flash",
-    api_key=os.getenv('GEMINI_API_KEY')
+    model="gpt-5-nano",
+    api_key=os.getenv('OPENAI_API_KEY')
 )
 
 @dataclass

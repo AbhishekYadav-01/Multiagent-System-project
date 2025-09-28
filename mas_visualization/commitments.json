@@ -4,75 +4,69 @@
             "debtor": "ClassroomAgent_C1",
             "creditor": "ClassroomAgent_C2",
             "time_adjustment": -1,
-            "future_obligation": "you (ClassroomAgent_C2) can receive a favorable time adjustment from ClassroomAgent_C1 in a future episode.",
-            "created_at": "2025-09-28T15:52:00.158657",
+            "future_obligation": "you (ClassroomAgent_C2) will receive a favorable time adjustment from ClassroomAgent_C1 in a future episode.",
+            "created_at": "2025-09-28T21:01:28.907382",
             "episode": "Monday_11AM",
             "status": "violated"
         },
         {
-            "debtor": "ClassroomAgent_C3",
-            "creditor": "ClassroomAgent_C1",
+            "debtor": "ClassroomAgent_C1",
+            "creditor": "ClassroomAgent_C2",
             "time_adjustment": -2,
-            "future_obligation": "ClassroomAgent_C3 owes ClassroomAgent_C1 a favorable time adjustment in a future episode.",
-            "created_at": "2025-09-28T15:58:29.855561",
+            "future_obligation": "you (ClassroomAgent_C2) will receive a favorable time adjustment from ClassroomAgent_C1 in a future episode.",
+            "created_at": "2025-09-28T21:06:41.515090",
+            "episode": "Monday_11AM",
+            "status": "violated"
+        },
+        {
+            "debtor": "ClassroomAgent_C1",
+            "creditor": "ClassroomAgent_C2",
+            "time_adjustment": -1,
+            "future_obligation": "to partially honor an outstanding commitment from ClassroomAgent_C1 to ClassroomAgent_C2",
+            "created_at": "2025-09-28T21:27:07.372435",
+            "episode": "Monday_11AM",
+            "status": "violated"
+        },
+        {
+            "debtor": "ClassroomAgent_C1",
+            "creditor": "ClassroomAgent_C2",
+            "time_adjustment": -1,
+            "future_obligation": "to partially honor outstanding commitments from ClassroomAgent_C1 to ClassroomAgent_C2 from Monday_11AM.",
+            "created_at": "2025-09-28T21:27:53.533871",
+            "episode": "Monday_11AM",
+            "status": "violated"
+        },
+        {
+            "debtor": "ClassroomAgent_C2",
+            "creditor": "ClassroomAgent_C3",
+            "time_adjustment": -2,
+            "future_obligation": "ClassroomAgent_C3 will align their class\u2019s first-wave release to occur 2 minutes earlier in the next session to support the stagger plan.",
+            "created_at": "2025-09-28T21:36:06.525460",
             "episode": "Monday_11AM",
             "status": "pending"
         },
         {
-            "debtor": "ClassroomAgent_C3",
+            "debtor": "ClassroomAgent_C2",
             "creditor": "ClassroomAgent_C1",
             "time_adjustment": -1,
-            "future_obligation": "ClassroomAgent_C3 owes ClassroomAgent_C1 a favorable time adjustment in a future episode.",
-            "created_at": "2025-09-28T16:24:27.046111",
-            "episode": "Monday_11AM",
-            "status": "pending"
-        },
-        {
-            "debtor": "ClassroomAgent_C4",
-            "creditor": "ClassroomAgent_C1",
-            "time_adjustment": -4,
-            "future_obligation": "ClassroomAgent_C1 can receive a favorable time adjustment from ClassroomAgent_C4 in a future episode.",
-            "created_at": "2025-09-28T16:33:15.932950",
+            "future_obligation": "you (ClassroomAgent_C1) can receive a favorable time adjustment in a future episode.",
+            "created_at": "2025-09-28T21:50:15.137930",
             "episode": "Monday_11AM",
             "status": "pending"
         }
     ],
     "reputations": {
         "ClassroomAgent_C1": {
-            "ClassroomAgent_C2": 11,
-            "ClassroomAgent_C3": 12,
-            "ClassroomAgent_C4": 11,
-            "ClassroomAgent_C5": 10,
-            "ClassroomAgent_C6": 10,
-            "ClassroomAgent_C7": 10,
-            "ClassroomAgent_C8": 10
+            "ClassroomAgent_C2": 15,
+            "ClassroomAgent_C3": 11,
+            "ClassroomAgent_C4": 10,
+            "ClassroomAgent_C5": 11
         },
         "ClassroomAgent_C2": {
-            "ClassroomAgent_C1": 6,
-            "ClassroomAgent_C3": 10,
+            "ClassroomAgent_C1": 1,
+            "ClassroomAgent_C3": 11,
             "ClassroomAgent_C4": 10,
-            "ClassroomAgent_C5": 10,
-            "ClassroomAgent_C6": 10,
-            "ClassroomAgent_C7": 10,
-            "ClassroomAgent_C8": 10
-        },
-        "ClassroomAgent_C3": {
-            "ClassroomAgent_C1": 12,
-            "ClassroomAgent_C2": 10,
-            "ClassroomAgent_C4": 10,
-            "ClassroomAgent_C5": 10,
-            "ClassroomAgent_C6": 10,
-            "ClassroomAgent_C7": 10,
-            "ClassroomAgent_C8": 10
-        },
-        "ClassroomAgent_C4": {
-            "ClassroomAgent_C1": 11,
-            "ClassroomAgent_C2": 10,
-            "ClassroomAgent_C3": 10,
-            "ClassroomAgent_C5": 10,
-            "ClassroomAgent_C6": 10,
-            "ClassroomAgent_C7": 10,
-            "ClassroomAgent_C8": 10
+            "ClassroomAgent_C5": 10
         }
     }
 }
