@@ -1,0 +1,73 @@
+{
+  "llm_config": {
+    "provider": "openai",
+    "model": "gpt-5-nano",
+    "temperature": 0.7,
+    "max_tokens": 1000,
+    "timeout": 30,
+    "api_key": "GEMINI_API_KEY"
+  },
+  "agents": {
+    "bottleneck_agent": {
+      "name": "BottleneckAgent",
+      "role": "traffic_monitor",
+      "capabilities": [
+        "monitor_bottleneck",
+        "estimate_student_counts",
+        "broadcast_updates",
+        "track_violations"
+      ],
+      "tools": ["monitor_bottleneck"],
+      "system_message": "You are the Bottleneck Monitoring Agent. Use tools to monitor traffic capacity and coordinate with classroom agents.",
+      "reflect_on_tool_use": true,
+      "model_client_stream": true
+    },
+    "classroom_agent_template": {
+      "role": "classroom_coordinator",
+      "capabilities": [
+        "monitor_attendance",
+        "negotiate_commitments",
+        "coordinate_exits",
+        "track_obligations"
+      ],
+      "tools": ["estimate_students"],
+      "system_message_template": "You are Classroom Agent {classroom_id}. Use tools to assess your situation and negotiate commitments with other agents.",
+      "negotiation_strategy": "cooperative",
+      "commitment_memory_depth": 10,
+      "reflect_on_tool_use": true,
+      "model_client_stream": true
+    }
+  },
+  "communication": {
+    "framework": "autogen_agentchat",
+    "async_mode": true,
+    "message_types": [
+      "TRAFFIC_UPDATE",
+      "COMMITMENT_PROPOSAL",
+      "COMMITMENT_ACCEPTANCE",
+      "COMMITMENT_REJECTION",
+      "DEAL_BROADCAST",
+      "VIOLATION_ALERT"
+    ],
+    "max_conversation_rounds": 25,
+    "timeout_per_round": 60,
+    "timeout_per_round_unit": "seconds"
+  },
+  "tools": {
+    "monitor_bottleneck": {
+      "description": "Monitor bottleneck capacity and congestion levels",
+      "parameters": {},
+      "async": true
+    },
+    "estimate_students": {
+      "description": "Estimate number of students in a classroom",
+      "parameters": {
+        "classroom_id": {
+          "type": "string",
+          "description": "ID of the classroom to estimate"
+        }
+      },
+      "async": true
+    }
+  }
+}
