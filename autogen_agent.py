@@ -36,7 +36,7 @@ class Commitment:
     future_obligation: str
     created_at: datetime
     episode: str  # e.g., "Monday_11AM"
-    status: str = "pending" # <--- ADD THIS LINE
+    status: str = "pending" 
 
 @dataclass
 class TrafficState:
@@ -187,14 +187,8 @@ class ClassroomAgent:
     async def assess_situation(self, traffic_update: str) -> str:
         """Assess current situation based on traffic update and past commitments."""
         
-        # --- NEW LOGIC TO CHECK FOR OBLIGATIONS ---
-        # Find commitments where this agent is the debtor (owes a favor)
         my_obligations = []
         for commitment in self.commitments_received:
-            # Note: In our current setup, the agent who receives the commitment is the creditor.
-            # Let's adjust this. A better way is to check the commitments made by others to this agent.
-            # For simplicity, let's assume the `commitments_received` list tracks what is owed TO this agent.
-            # And `commitments_made` tracks what this agent owes.
             pass # We will check commitments_made instead.
 
         my_debts = [c for c in self.commitments_made if c.status == "pending"]
@@ -231,7 +225,7 @@ class ClassroomAgent:
         response = await self.agent.run(task=assessment_task)
         return str(response.messages[-1].content)
     
-# In ClassroomAgent
+    # In ClassroomAgent
     async def parse_commitment_from_text(self, text: str, **kwargs) -> Optional[Dict]:
         # This method now just needs to extract the JSON, which is much more reliable.
         try:
@@ -327,7 +321,6 @@ class MultiAgentTrafficSystem:
                         return
 
             if evaluation.strip().upper().startswith("ACCEPT"):
-                # --- CORRECTED LINE ---
                 parsed_terms = await initiator.parse_commitment_from_text(proposal)
                 if parsed_terms:
                     print("✅ Deal ACCEPTED. Creating commitment from parsed terms.")
@@ -450,7 +443,6 @@ class MultiAgentTrafficSystem:
             print(f"❌ Error loading state: {e}")
     
         # In MultiAgentTrafficSystem
-    # --- NEW: Add this entire method ---
     def select_negotiation_target(self, initiator: ClassroomAgent) -> Optional[ClassroomAgent]:
         potential_targets = [agent for agent in self.classroom_agents if agent.name != initiator.name]
         if not potential_targets:
@@ -543,7 +535,6 @@ async def demonstrate_tool_usage():
         print(f"❌ Error in tool demonstration: {e}")
 
     finally:
-        # Do NOT close model_client here — main() will close it once at the end.
         pass
 
 async def main():
