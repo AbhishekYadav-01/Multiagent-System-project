@@ -115,7 +115,7 @@ OPENAI_API_KEY="your_api_key_here"
     ```bash
     uvicorn main:app --reload
     ```
-3.  Open your web browser and navigate to **[http://12](https://www.google.com/search?q=http://127.0.0.1:8000)**.
+3.  Open your web browser and navigate to **[http://127.0.0.1:8000](https://www.google.com/search?q=http://127.0.0.1:8000)**.
 
 The `--reload` flag enables hot-reloading, so the server will automatically restart when you make changes to the code.
 
