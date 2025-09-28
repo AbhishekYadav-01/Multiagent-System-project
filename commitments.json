@@ -1,0 +1,45 @@
+{
+    "commitments": [
+        {
+            "debtor": "ClassroomAgent_C5",
+            "creditor": "ClassroomAgent_C1",
+            "time_adjustment": -4,
+            "future_obligation": "ClassroomAgent_C1 will receive a favorable time adjustment from ClassroomAgent_C5 in a future episode.",
+            "created_at": "2025-09-28T14:55:44.362677",
+            "episode": "Monday_11AM",
+            "status": "pending"
+        }
+    ],
+    "reputations": {
+        "ClassroomAgent_C1": {
+            "ClassroomAgent_C2": 10,
+            "ClassroomAgent_C3": 10,
+            "ClassroomAgent_C4": 10,
+            "ClassroomAgent_C5": 11
+        },
+        "ClassroomAgent_C2": {
+            "ClassroomAgent_C1": 10,
+            "ClassroomAgent_C3": 10,
+            "ClassroomAgent_C4": 10,
+            "ClassroomAgent_C5": 10
+        },
+        "ClassroomAgent_C3": {
+            "ClassroomAgent_C1": 10,
+            "ClassroomAgent_C2": 10,
+            "ClassroomAgent_C4": 10,
+            "ClassroomAgent_C5": 10
+        },
+        "ClassroomAgent_C4": {
+            "ClassroomAgent_C1": 10,
+            "ClassroomAgent_C2": 10,
+            "ClassroomAgent_C3": 10,
+            "ClassroomAgent_C5": 10
+        },
+        "ClassroomAgent_C5": {
+            "ClassroomAgent_C1": 11,
+            "ClassroomAgent_C2": 10,
+            "ClassroomAgent_C3": 10,
+            "ClassroomAgent_C4": 10
+        }
+    }
+}
