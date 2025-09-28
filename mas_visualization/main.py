@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Model client configuration (copy from your other file)
+# Model client configuration 
 model_client = OpenAIChatCompletionClient(
     model="gpt-5-nano",
     api_key=os.getenv('OPENAI_API_KEY')
@@ -82,8 +82,8 @@ class Commitment:
     time_adjustment: int  # minutes (positive = early, negative = late)
     future_obligation: str
     created_at: datetime
-    episode: str  # e.g., "Monday_11AM"
-    status: str = "pending" # <--- ADD THIS LINE
+    episode: str 
+    status: str = "pending" 
 
 @dataclass
 class TrafficState:
@@ -234,14 +234,9 @@ class ClassroomAgent:
     async def assess_situation(self, traffic_update: str) -> str:
         """Assess current situation based on traffic update and past commitments."""
         
-        # --- NEW LOGIC TO CHECK FOR OBLIGATIONS ---
         # Find commitments where this agent is the debtor (owes a favor)
         my_obligations = []
         for commitment in self.commitments_received:
-            # Note: In our current setup, the agent who receives the commitment is the creditor.
-            # Let's adjust this. A better way is to check the commitments made by others to this agent.
-            # For simplicity, let's assume the `commitments_received` list tracks what is owed TO this agent.
-            # And `commitments_made` tracks what this agent owes.
             pass # We will check commitments_made instead.
 
         my_debts = [c for c in self.commitments_made if c.status == "pending"]
@@ -278,7 +273,7 @@ class ClassroomAgent:
         response = await self.agent.run(task=assessment_task)
         return str(response.messages[-1].content)
     
-# In ClassroomAgent
+    # In ClassroomAgent
     async def parse_commitment_from_text(self, text: str, **kwargs) -> Optional[Dict]:
         # This method now just needs to extract the JSON, which is much more reliable.
         try:
@@ -331,7 +326,7 @@ class MultiAgentTrafficSystem:
             def format_update(msg_type, data):
                 return json.dumps({"type": msg_type, "data": data}) + "\n"
 
-            # --- INITIALIZATION ---
+            
             agent_names = [f"ClassroomAgent_C{i}" for i in range(1, num_classrooms + 1)]
             self.classroom_agents = [ClassroomAgent(f"C{i}", agent_names) for i in range(1, num_classrooms + 1)]
             self.load_commitments_from_file()
@@ -345,7 +340,7 @@ class MultiAgentTrafficSystem:
             yield format_update("agent_setup", initial_states)
 
             try:
-                # --- STEP 1: TRAFFIC MONITORING ---
+                # STEP 1: TRAFFIC MONITORING 
                 yield format_update("log", "1. TRAFFIC MONITORING PHASE")
                 traffic_update = await self.bottleneck_agent.broadcast_traffic_state()
                 yield format_update("bottleneck_update", {
@@ -354,14 +349,14 @@ class MultiAgentTrafficSystem:
                     "capacity": self.bottleneck_agent.traffic_state.capacity
                 })
 
-                # --- STEP 2: SITUATION ASSESSMENT ---
+                # STEP 2: SITUATION ASSESSMENT
                 yield format_update("log", "2. SITUATION ASSESSMENT PHASE")
                 for agent in self.classroom_agents:
                     assessment = await agent.assess_situation(traffic_update)
                     yield format_update("assessment_update", {"name": agent.name, "assessment": assessment})
                     await asyncio.sleep(3);
 
-                # --- STEP 3: DYNAMIC NEGOTIATION ---
+                # STEP 3: DYNAMIC NEGOTIATION 
                 yield format_update("log", "3. DYNAMIC NEGOTIATION PHASE")
                 agents_by_pressure = sorted(self.classroom_agents, key=lambda a: a.student_count, reverse=True)
                 initiator = agents_by_pressure[0]
@@ -375,7 +370,7 @@ class MultiAgentTrafficSystem:
                 evaluation = await target.evaluate_proposal(proposal, initiator.name)
                 yield format_update("negotiation_response", {"from": target.name, "to": initiator.name, "response": evaluation})
 
-                # --- STEP 4: COMMITMENT EXECUTION ---
+                # STEP 4: COMMITMENT EXECUTION 
                 yield format_update("log", "4. COMMITMENT EXECUTION")
                 
                 agent_map = {agent.name: agent for agent in self.classroom_agents}
@@ -528,7 +523,6 @@ class MultiAgentTrafficSystem:
             print(f"❌ Error loading state: {e}")
     
         # In MultiAgentTrafficSystem
-    # --- NEW: Add this entire method ---
     def select_negotiation_target(self, initiator: ClassroomAgent) -> Optional[ClassroomAgent]:
         potential_targets = [agent for agent in self.classroom_agents if agent.name != initiator.name]
         if not potential_targets:
@@ -621,14 +615,8 @@ async def demonstrate_tool_usage():
         print(f"❌ Error in tool demonstration: {e}")
 
     finally:
-        # Do NOT close model_client here — main() will close it once at the end.
         pass
     
-
-# In main.py, after the read_root function
-# In main.py, after the read_root function
-
-# In main.py, REPLACE the /simulation/run endpoint
 
 @app.post("/simulation/stop")
 async def stop_simulation():
@@ -638,7 +626,6 @@ async def stop_simulation():
         return {"message": "Stop signal sent."}
     return {"message": "No active simulation to stop."}
 
-# In main.py, REPLACE the existing run_simulation function
 
 @app.post("/simulation/run")
 async def run_simulation(request: Request):
@@ -648,7 +635,6 @@ async def run_simulation(request: Request):
 
     form_data = await request.form()
     num_classrooms = int(form_data.get("numClassrooms", 5))
-    # --- NEW: Get the number of episodes from the form data ---
     num_episodes = int(form_data.get("numEpisodes", 1))
 
     async def run_and_broadcast():
@@ -656,7 +642,7 @@ async def run_simulation(request: Request):
         system = MultiAgentTrafficSystem()
         
         try:
-            # --- NEW: Loop for the number of requested episodes ---
+            # Loop for the number of requested episodes ---
             for i in range(num_episodes):
                 episode_header = f"--- STARTING EPISODE {i + 1} of {num_episodes} ---"
                 await manager.broadcast(json.dumps({"type": "log", "data": "\n" + "="*20}))
