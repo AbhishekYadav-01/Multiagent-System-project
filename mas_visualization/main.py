@@ -1,32 +1,79 @@
-"""
-Updated AutoGen Implementation for Traffic Bottleneck Coordination
-MAS Assignment - Multiagent Systems Course
-Using autogen-agentchat package (modern version)
-"""
+# main.py
 
+import fastapi
 import asyncio
 import json
 import random
-import time
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
 
+from fastapi import Request
+from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.templating import Jinja2Templates
 
-# Updated imports for autogen-agentchat
+# Assuming autogen_agentchat and dotenv are installed
 from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.messages import TextMessage, MultiModalMessage
-from autogen_agentchat.ui import Console
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from dotenv import load_dotenv
+
 load_dotenv()
-# Model client configuration for autogen-agentchat
+
+# Model client configuration (copy from your other file)
 model_client = OpenAIChatCompletionClient(
     model="gemini-2.5-flash",
     api_key=os.getenv('GEMINI_API_KEY')
 )
 
+simulation_task: Optional[asyncio.Task] = None
+
+# Create the FastAPI app object
+app = fastapi.FastAPI()
+
+# Point to the 'templates' directory for HTML files
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    """
+    This function runs when a user goes to the main page ('/').
+    It renders and returns the index.html file.
+    """
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
+
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[fastapi.WebSocket] = []
+
+    async def connect(self, websocket: fastapi.WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: fastapi.WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+manager = ConnectionManager()
+
+# In main.py, after the root ("/") endpoint
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: fastapi.WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep the connection alive
+            await websocket.receive_text()
+    except fastapi.WebSocketDisconnect:
+        manager.disconnect(websocket)
+        
+        
 @dataclass
 class Commitment:
     """Represents a commitment between agents"""
@@ -275,120 +322,151 @@ class MultiAgentTrafficSystem:
         self.classroom_agents = [ClassroomAgent(f"C{i}", agent_names) for i in range(1, 6)]
         self.load_commitments_from_file()
 
-    async def run_coordination_episode(self):
-        print("\n" + "="*60 + "\nMULTIAGENT TRAFFIC COORDINATION SIMULATION (UPGRADED)\n" + f"Episode: {datetime.now().strftime('%A, %Y-%m-%d %H:%M')}\n" + "="*60)
-        try:
-            # Step 1: Bottleneck agent broadcasts traffic state
-            print("\n1. TRAFFIC MONITORING PHASE")
-            traffic_update = await self.bottleneck_agent.broadcast_traffic_state()
-            print(f"Agent B: {traffic_update}")
-            congestion_level = self.bottleneck_agent.traffic_state.current_congestion
+    async def run_coordination_episode(self, num_classrooms: int):
+            """
+            Runs one full episode of the simulation and yields JSON updates for each step.
+            This is the main simulation async generator.
+            """
+            # Helper to format messages for streaming
+            def format_update(msg_type, data):
+                return json.dumps({"type": msg_type, "data": data}) + "\n"
 
-            # Step 2: Classroom agents assess situations
-            print("\n2. SITUATION ASSESSMENT PHASE")
-            for agent in self.classroom_agents:
-                assessment = await agent.assess_situation(traffic_update)
-                print(f"[{agent.name}] Assessment: {assessment[:120]}...")
+            # --- INITIALIZATION ---
+            agent_names = [f"ClassroomAgent_C{i}" for i in range(1, num_classrooms + 1)]
+            self.classroom_agents = [ClassroomAgent(f"C{i}", agent_names) for i in range(1, num_classrooms + 1)]
+            self.load_commitments_from_file()
 
-            # Step 3: DYNAMIC NEGOTIATION PHASE
-            print("\n3. DYNAMIC NEGOTIATION PHASE")
-            agents_by_pressure = sorted(self.classroom_agents, key=lambda a: a.student_count, reverse=True)
-            initiator = agents_by_pressure[0]
-            target = self.select_negotiation_target(initiator)
-            if not target:
-                print("Not enough agents to negotiate."); return
-
-            print(f"Heuristic chose [{initiator.name}] to initiate negotiation with [{target.name}].")
-            proposal = await initiator.propose_commitment(target.name, congestion_level)
-            print(f"[{initiator.name}] → [{target.name}]: {proposal}")
-            evaluation = await target.evaluate_proposal(proposal, initiator.name)
-            print(f"[{target.name}] Response: {evaluation}")
-
-            # Step 4: COMMITMENT EXECUTION
-            print("\n4. COMMITMENT EXECUTION")
+            yield format_update("log", f"Starting new simulation with {num_classrooms} classrooms.")
             
-            def update_reputations(agent1, agent2, outcome: str):
-                # Helper function to update reputation scores
-                if outcome == 'success':
-                    agent1.reputation_scores[agent2.name] = min(15, agent1.reputation_scores.get(agent2.name, 10) + 1)
-                    agent2.reputation_scores[agent1.name] = min(15, agent2.reputation_scores.get(agent1.name, 10) + 1)
-                elif outcome == 'violation':
-                    agent1.reputation_scores[agent2.name] = max(0, agent1.reputation_scores.get(agent2.name, 10) - 5)
+            initial_states = [{
+                "name": agent.name, "students": agent.student_count,
+                "flexibility": agent.professor_flexibility, "reputation": agent.reputation_scores
+            } for agent in self.classroom_agents]
+            yield format_update("agent_setup", initial_states)
 
-            def check_for_violation(violator, initiator):
-                for commitment in violator.commitments_made:
-                    if commitment.creditor == initiator.name and commitment.status == "pending":
-                        print(f"  -> VIOLATION: {violator.name} had a pending obligation to {initiator.name}.")
-                        commitment.status = "violated"
-                        violator.violation_count += 1
-                        update_reputations(initiator, violator, 'violation')
-                        print(f"  -> {violator.name}'s reputation with {initiator.name} drops! New Score: {initiator.reputation_scores[violator.name]}")
-                        if violator.violation_count > 3: print(f"🚨 VIOLATION EVENT: {violator.name} has violated commitments more than 3 times!")
-                        return
+            try:
+                # --- STEP 1: TRAFFIC MONITORING ---
+                yield format_update("log", "1. TRAFFIC MONITORING PHASE")
+                traffic_update = await self.bottleneck_agent.broadcast_traffic_state()
+                yield format_update("bottleneck_update", {
+                    "message": traffic_update,
+                    "congestion": round(self.bottleneck_agent.traffic_state.current_congestion, 2),
+                    "capacity": self.bottleneck_agent.traffic_state.capacity
+                })
 
-            if evaluation.strip().upper().startswith("ACCEPT"):
-                # --- CORRECTED LINE ---
-                parsed_terms = await initiator.parse_commitment_from_text(proposal)
-                if parsed_terms:
-                    print("✅ Deal ACCEPTED. Creating commitment from parsed terms.")
-                    commitment = initiator.create_commitment(**parsed_terms)
-                    initiator.commitments_made.append(commitment)
-                    target.commitments_received.append(commitment)
-                    update_reputations(initiator, target, 'success')
-                    await self.broadcast_commitment(commitment)
-            
-            elif evaluation.strip().upper().startswith("COUNTER"):
-                print(f"🔵 Deal Countered. [{initiator.name}] is evaluating the counter-offer.")
-                check_for_violation(violator=target, initiator=initiator)
-                counter_evaluation = await initiator.evaluate_proposal(evaluation, target.name)
-                print(f"[{initiator.name}] Response to Counter: {counter_evaluation}")
+                # --- STEP 2: SITUATION ASSESSMENT ---
+                yield format_update("log", "2. SITUATION ASSESSMENT PHASE")
+                for agent in self.classroom_agents:
+                    assessment = await agent.assess_situation(traffic_update)
+                    yield format_update("assessment_update", {"name": agent.name, "assessment": assessment})
+                    await asyncio.sleep(2);
 
-                if counter_evaluation.strip().upper().startswith("ACCEPT"):
-                    # --- CORRECTED LINE ---
-                    parsed_terms = await target.parse_commitment_from_text(evaluation)
+                # --- STEP 3: DYNAMIC NEGOTIATION ---
+                yield format_update("log", "3. DYNAMIC NEGOTIATION PHASE")
+                agents_by_pressure = sorted(self.classroom_agents, key=lambda a: a.student_count, reverse=True)
+                initiator = agents_by_pressure[0]
+                target = self.select_negotiation_target(initiator)
+                if not target:
+                    yield format_update("log", "Not enough agents to negotiate."); return
+
+                yield format_update("negotiation_start", {"initiator": initiator.name, "target": target.name})
+                proposal = await initiator.propose_commitment(target.name, self.bottleneck_agent.traffic_state.current_congestion)
+                yield format_update("negotiation_proposal", {"from": initiator.name, "to": target.name, "proposal": proposal})
+                evaluation = await target.evaluate_proposal(proposal, initiator.name)
+                yield format_update("negotiation_response", {"from": target.name, "to": initiator.name, "response": evaluation})
+
+                # --- STEP 4: COMMITMENT EXECUTION ---
+                yield format_update("log", "4. COMMITMENT EXECUTION")
+                
+                agent_map = {agent.name: agent for agent in self.classroom_agents}
+
+                def update_reputations(agent1_name, agent2_name, outcome: str):
+                    # Helper function to update reputation scores
+                    agent1 = agent_map[agent1_name]
+                    agent2 = agent_map[agent2_name]
+                    if outcome == 'success':
+                        agent1.reputation_scores[agent2.name] = min(15, agent1.reputation_scores.get(agent2.name, 10) + 1)
+                        agent2.reputation_scores[agent1.name] = min(15, agent2.reputation_scores.get(agent1.name, 10) + 1)
+                    elif outcome == 'violation':
+                        # Only the initiator's opinion of the violator is damaged
+                        agent1.reputation_scores[agent2.name] = max(0, agent1.reputation_scores.get(agent2.name, 10) - 5)
+
+                async def check_for_violation(violator, initiator):
+                    # Async generator to check for and yield violation updates
+                    for commitment in violator.commitments_made:
+                        if commitment.creditor == initiator.name and commitment.status == "pending":
+                            commitment.status = "violated"
+                            violator.violation_count += 1
+                            update_reputations(initiator.name, violator.name, 'violation')
+                            yield format_update("violation_update", {
+                                "violator": violator.name, "initiator": initiator.name,
+                                "new_reputation": initiator.reputation_scores[violator.name]
+                            })
+
+                if evaluation.strip().upper().startswith("ACCEPT"):
+                    parsed_terms = await initiator.parse_commitment_from_text(proposal)
                     if parsed_terms:
-                        print("✅ Counter-offer ACCEPTED. Creating commitment from parsed counter-offer.")
-                        commitment = target.create_commitment(**parsed_terms)
-                        agent_map = {agent.name: agent for agent in self.classroom_agents}
-                        if parsed_terms.get('debtor') in agent_map: agent_map[parsed_terms['debtor']].commitments_made.append(commitment)
-                        if parsed_terms.get('creditor') in agent_map: agent_map[parsed_terms['creditor']].commitments_received.append(commitment)
-                        update_reputations(initiator, target, 'success')
-                        await self.broadcast_commitment(commitment)
-                else:
-                    print("❌ Counter-offer REJECTED. Negotiation failed.")
-            
-            else: # REJECT
-                print("❌ Deal REJECTED. No coordination achieved.")
-                check_for_violation(violator=target, initiator=initiator)
+                        yield format_update("log", "✅ Deal ACCEPTED. Creating commitment...")
+                        commitment = initiator.create_commitment(**parsed_terms)
+                        agent_map[commitment.debtor].commitments_made.append(commitment)
+                        agent_map[commitment.creditor].commitments_received.append(commitment)
+                        update_reputations(initiator.name, target.name, 'success')
+                        yield format_update("reputation_update", {"agents": [initiator.name, target.name], "new_scores": {initiator.name: initiator.reputation_scores, target.name: target.reputation_scores}})
+                        async for update in self.broadcast_commitment(commitment): yield update
+                
+                elif evaluation.strip().upper().startswith("COUNTER"):
+                    yield format_update("log", f"🔵 Deal Countered. [{initiator.name}] is evaluating...")
+                    async for update in check_for_violation(target, initiator): yield update
+                    
+                    counter_evaluation = await initiator.evaluate_proposal(evaluation, target.name)
+                    yield format_update("negotiation_response", {"from": initiator.name, "to": target.name, "response": counter_evaluation})
 
-            print("\n5. COORDINATED STUDENT EXITS\nExit times will be based on the outcome of the negotiation.")
-            print("\n✅ Dynamic coordination episode completed!")
-        except Exception as e:
-            print(f"❌ Error in coordination episode: {e}")
-        finally:
-            self.save_commitments_to_file()
-    
+                    if counter_evaluation.strip().upper().startswith("ACCEPT"):
+                        parsed_terms = await target.parse_commitment_from_text(evaluation)
+                        if parsed_terms:
+                            yield format_update("log", "✅ Counter-offer ACCEPTED. Creating commitment...")
+                            commitment = target.create_commitment(**parsed_terms)
+                            agent_map[parsed_terms['debtor']].commitments_made.append(commitment)
+                            agent_map[parsed_terms['creditor']].commitments_received.append(commitment)
+                            update_reputations(initiator.name, target.name, 'success')
+                            yield format_update("reputation_update", {"agents": [initiator.name, target.name], "new_scores": {initiator.name: initiator.reputation_scores, target.name: target.reputation_scores}})
+                            async for update in self.broadcast_commitment(commitment): yield update
+                    else:
+                        yield format_update("log", "❌ Counter-offer REJECTED. Negotiation failed.")
+                
+                else: # REJECT
+                    yield format_update("log", "❌ Deal REJECTED. No coordination achieved.")
+                    async for update in check_for_violation(target, initiator): yield update
+
+                yield format_update("log", "5. COORDINATED STUDENT EXITS")
+
+            except Exception as e:
+                yield format_update("error", f"Error in coordination episode: {e}")
+            finally:
+                self.save_commitments_to_file()
+                yield format_update("log", "💾 State saved successfully.")
+        
     # Inside the MultiAgentTrafficSystem class
     async def broadcast_commitment(self, commitment: Commitment):
-        """Broadcasts the details of a successful commitment to all agents."""
-        print("\n📢 BROADCASTING new commitment to all agents...")
+        """
+        Broadcasts the details of a successful commitment to all agents.
+        This is an async generator that yields updates.
+        """
+        def format_update(msg_type, data):
+            return json.dumps({"type": msg_type, "data": data}) + "\n"
+        
+        yield format_update("log", f"📢 BROADCASTING: Deal confirmed between {commitment.debtor} and {commitment.creditor}.")
+        
         broadcast_message = (
             f"DEAL_CONFIRMED: {commitment.debtor} will adjust by "
             f"{commitment.time_adjustment} mins. A future obligation to "
             f"{commitment.creditor} has been recorded."
         )
         
-        # Create a list of tasks for all agents to receive the broadcast concurrently
-        broadcast_tasks = []
         for agent in self.classroom_agents:
-            # Don't send the broadcast to the two agents who made the deal,
-            # as they are already aware of it.
             if agent.name != commitment.debtor and agent.name != commitment.creditor:
-                broadcast_tasks.append(agent.receive_broadcast(broadcast_message))
-        
-        # Run all broadcast tasks concurrently
-        await asyncio.gather(*broadcast_tasks)
-        
+                yield format_update("broadcast_update", {"recipient": agent.name, "message": broadcast_message})
+
     
     def save_commitments_to_file(self, filename="commitments.json"):
             print(f"\n💾 Saving state to {filename}...")
@@ -440,7 +518,7 @@ class MultiAgentTrafficSystem:
             loaded_reputations = saved_state.get('reputations', {})
             for agent_name, reputations in loaded_reputations.items():
                 if agent_name in agent_map:
-                    agent_map[agent_name].reputation_scores = reputations
+                    agent_map[agent_name].reputation_scores.update(reputations) # <-- Change to .update()
             
             print(f"✅ Loaded {len(loaded_commitments)} commitments and reputation scores.")
 
@@ -545,6 +623,46 @@ async def demonstrate_tool_usage():
     finally:
         # Do NOT close model_client here — main() will close it once at the end.
         pass
+    
+
+# In main.py, after the read_root function
+# In main.py, after the read_root function
+
+# In main.py, REPLACE the /simulation/run endpoint
+
+@app.post("/simulation/stop")
+async def stop_simulation():
+    global simulation_task
+    if simulation_task and not simulation_task.done():
+        simulation_task.cancel()
+        return {"message": "Stop signal sent."}
+    return {"message": "No active simulation to stop."}
+
+@app.post("/simulation/run")
+async def run_simulation(request: Request):
+    global simulation_task
+    if simulation_task and not simulation_task.done():
+        return fastapi.Response(status_code=409, content="A simulation is already running.")
+
+    form_data = await request.form()
+    num_classrooms = int(form_data.get("numClassrooms", 5))
+
+    async def run_and_broadcast():
+        system = MultiAgentTrafficSystem()
+        try:
+            async for update in system.run_coordination_episode(num_classrooms):
+                await manager.broadcast(update)
+        except asyncio.CancelledError:
+            await manager.broadcast(json.dumps({"type": "log", "data": "[Simulation Stopped by User]"}))
+        finally:
+            # Ensure final state is saved even on cancellation
+            system.save_commitments_to_file()
+            await manager.broadcast(json.dumps({"type": "log", "data": "💾 State saved successfully."}))
+
+
+    simulation_task = asyncio.create_task(run_and_broadcast())
+    
+    return {"message": "Simulation started"}
 
 async def main():
     """Main function to run demonstrations"""
